@@ -32,18 +32,19 @@ BOT_TOKEN='161080402:AAGah3HIxM9jUr0NX1WmEKX3cJCv9PyWD58'
 ######################################################################################
 
 dbaccess="denied"
-until [[ $dbaccess = "success" ]]; do
+count=0
+while [ $dbaccess = "success" ] || [ $count -lt 3 ] ; do
+	count=$((count+1))
 	echo "Checking MySQL connection..."
 	mysql --host="${dbserver}" --user="${dbuser}" --password="${dbpass}" -e exit 2>/dev/null
-	dbstatus=`echo $?`
+	dbstatus=`echo $?`      
 	if [ $dbstatus -ne 0 ]; then
 		${CURL} -k -s -c ${COOKIE} -b ${COOKIE} -s -X GET "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${USER}&text=Banco de dados Mysql no servidor $SERVIDOR esta Down - Data:  $(date '+%d/%m/%Y-%H:%M:%S')"  > /dev/null  
 	else
 		dbaccess="success"
 		echo "Success!"
+		exit 0
 	fi
 done
 
 exit 0
-
-
