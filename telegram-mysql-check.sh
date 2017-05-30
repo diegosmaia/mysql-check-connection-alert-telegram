@@ -2,7 +2,8 @@
 
 ##########################################################################
 # Linux envio de alerta de perda de conexão com Mysql pelo Telegram
-# Author: Diego Maia - diegosmaia@yahoo.com.br Telegram - @diegosmaia
+# Author's: Diego Maia - diegosmaia@yahoo.com.br Telegram - @diegosmaia
+# 			Carlos Markennede 					 Telegram - @Markennede
 ##########################################################################
 
 CURL="/usr/bin/curl"
@@ -31,20 +32,21 @@ BOT_TOKEN='161080402:AAGah3HIxM9jUr0NX1WmEKX3cJCv9PyWD58'
 # http://linuxtitbits.blogspot.com.br/2011/01/checking-mysql-connection-status.html
 ######################################################################################
 
-dbaccess="denied"
-count=0
-while [ $dbaccess = "success" ] || [ $count -lt 3 ] ; do
-	count=$((count+1))
-	echo "Checking MySQL connection..."
-	mysql --host="${dbserver}" --user="${dbuser}" --password="${dbpass}" -e exit 2>/dev/null
-	dbstatus=`echo $?`      
-	if [ $dbstatus -ne 0 ]; then
-		${CURL} -k -s -c ${COOKIE} -b ${COOKIE} -s -X GET "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${USER}&text=Banco de dados Mysql no servidor $SERVIDOR esta Down - Data:  $(date '+%d/%m/%Y-%H:%M:%S')"  > /dev/null  
-	else
-		dbaccess="success"
-		echo "Success!"
-		exit 0
+
+mysql --user="${dbuser}" --host="${dbserver}" --password="${dbpass}" -e exit 2>/dev/null
+dbstatus=`echo $?`
+if [ $dbstatus -ne 0 ]; then
+	echo "Servidor não consegue se conectar ao servidor Mysql"
+	${CURL} -k -s -c ${COOKIE} -b ${COOKIE} -s -X GET "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${USER}&text=Impossível se conectar ao BD, o mesmo parece estar Down - Data:  $(date '+%d/%m/%Y-%H:%M:%S')"  > /dev/null
+	echo $dbstatus > /tmp/telegram-mysql-check.msg
+else
+	echo "Success!"
+	if [ -f "/tmp/telegram-mysql-check.msg" ]; then
+		${CURL} -k -s -c ${COOKIE} -b ${COOKIE} -s -X GET "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${USER}&text=Conexao com BD - Normalizado - Data:  $(date '+%d/%m/%Y-%H:%M:%S')"  > /dev/null
+		rm -rf /tmp/telegram-mysql-check.msg
 	fi
-done
+	exit 0
+fi
+
 
 exit 0
